@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>갈매기의 북구 여행</title>
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #a9d3f5; font-family: "Segoe UI", "Malgun Gothic", sans-serif; }
@@ -17,8 +17,8 @@
            background: #000a; padding: 16px 32px; border-radius: 14px; text-align: center; opacity: 0; transition: opacity .4s; pointer-events: none; }
   #toast small { display: block; font-size: 16px; font-weight: normal; margin-top: 6px; }
   #credit { position: fixed; bottom: 6px; right: 10px; color: #fff; font-size: 11px; text-shadow: 0 1px 2px #000; pointer-events: none; }
-  #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-             background: linear-gradient(#1d4f7acc, #0b2236ee); color: #fff; text-align: center; padding: 16px; }
+  #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center;
+             background: linear-gradient(#1d4f7acc, #0b2236ee); color: #fff; text-align: center; padding: 16px; overflow-y: auto; box-sizing: border-box; }
   #overlay h1 { font-size: 40px; margin: 0 0 10px; }
   #overlay p { font-size: 17px; margin: 6px; opacity: .92; }
   #keys { margin: 14px 0; font-size: 15px; line-height: 1.9; background: #ffffff18; padding: 12px 22px; border-radius: 12px; }
@@ -36,10 +36,6 @@
   .btns button:disabled { background: #888; cursor: wait; }
   #hint { position: fixed; bottom: 34px; left: 50%; transform: translateX(-50%); color: #fff; background: #000a;
           padding: 8px 16px; border-radius: 10px; font-size: 15px; pointer-events: none; }
-  @media (max-width: 760px) {
-    #nav { top: auto; bottom: 40px; }
-    #hud { font-size: 13px; }
-  }
   .gauge { width: 150px; height: 10px; background: #ffffff33; border-radius: 6px; overflow: hidden; display: inline-block; vertical-align: middle; }
   #stamina { height: 100%; width: 100%; background: linear-gradient(90deg, #ff9800, #ffd54a); transition: width .15s; }
   #stamina.low { background: #ff5252; }
@@ -52,7 +48,43 @@
   .modes button { font-size: 16px; padding: 8px 18px; border-radius: 20px; border: 2px solid #ffffff55; background: #ffffff18; color: #fff; cursor: pointer; }
   .modes button.on { background: #fff; color: #123; font-weight: bold; border-color: #fff; }
   .modes small { font-size: 12px; opacity: .8; }
-  @media (max-width: 760px) { #minimap { width: 110px; height: 110px; bottom: 120px; } }
+
+  /* ---------- 휴대폰 터치 조작 ---------- */
+  html, body, canvas { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  #touch button { -webkit-tap-highlight-color: transparent; }
+  #joy { position: fixed; left: max(18px, env(safe-area-inset-left)); bottom: 22px; width: 130px; height: 130px; border-radius: 50%;
+         background: #ffffff22; border: 2px solid #ffffff66; touch-action: none; }
+  #knob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%;
+          background: #ffffffcc; box-shadow: 0 2px 6px #0006; pointer-events: none; }
+  #boost-btn { position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: 26px; width: 92px; height: 92px; border-radius: 50%;
+               border: 0; background: #ff9800dd; color: #fff; font-size: 15px; font-weight: bold; box-shadow: 0 3px 8px #0006; touch-action: none; }
+  #boost-btn.on { background: #ffd54a; color: #222; transform: scale(0.95); }
+  #tbtns { position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: 132px; display: flex; gap: 8px; }
+  #tbtns button { width: 46px; height: 46px; border-radius: 50%; border: 0; background: #0008; color: #fff; font-size: 20px; }
+  #rotate-tip { position: fixed; left: 50%; top: 45%; transform: translateX(-50%); color: #fff; background: #000a; padding: 10px 16px;
+                border-radius: 10px; font-size: 14px; pointer-events: none; display: none; }
+  @media (orientation: portrait) { body.touch #rotate-tip { display: block; } }
+
+  /* 작은 화면: 정보창을 작게, 미니맵은 오른쪽 위로 */
+  @media (max-width: 900px), (max-height: 500px) {
+    #overlay h1 { font-size: 26px; }
+    #overlay p, #keys { font-size: 13px; }
+    #keys { padding: 8px 12px; margin: 8px 0; }
+    #google-box { font-size: 12px; margin-top: 8px; }
+    .btns button { font-size: 15px; padding: 10px 16px; }
+    .modes button { font-size: 13px; padding: 6px 12px; }
+    #hud { font-size: 11px; line-height: 1.5; padding: 6px 9px; top: 8px; left: 8px; }
+    .gauge { width: 80px; height: 8px; }
+    #nav { top: 8px; padding: 4px 10px; min-width: 110px; }
+    #nav .name { font-size: 14px; }
+    #nav .sub { font-size: 11px; }
+    #arrow { font-size: 22px; }
+    #timer { top: 8px; right: 8px; font-size: 16px; padding: 4px 10px; }
+    #minimap { left: auto; right: 8px; bottom: auto; top: 58px; width: 96px; height: 96px; }
+    #toast { font-size: 18px; padding: 10px 18px; top: 22%; }
+    #toast small { font-size: 12px; }
+    #credit { font-size: 8px; }
+  }
   .hidden { display: none !important; }
 </style>
 </head>
@@ -73,6 +105,16 @@
 <div id="toast"></div>
 <div id="timer" class="hidden">⏱ 0:00.00<small id="besttime"></small></div>
 <canvas id="minimap" class="hidden" width="340" height="340"></canvas>
+<div id="touch" class="hidden">
+  <div id="joy"><div id="knob"></div></div>
+  <div id="tbtns">
+    <button data-act="cam" aria-label="시점 전환">🎥</button>
+    <button data-act="night" aria-label="낮 밤 전환">🌙</button>
+    <button data-act="menu" aria-label="메뉴">⏸</button>
+  </div>
+  <button id="boost-btn">🚀<br>부스트</button>
+  <div id="rotate-tip">📱 휴대폰을 가로로 돌리면 더 넓게 보여요</div>
+</div>
 <div id="hint" class="hidden">🖱️ 화면을 한 번 클릭한 뒤 방향키를 눌러보세요</div>
 <div id="credit">위성사진 © Esri, Maxar, Earthstar Geographics · 지형 © AWS Terrain Tiles (Mapzen) · 건물·장소 © OpenStreetMap contributors</div>
 
@@ -86,13 +128,14 @@
   <div class="modes">
     <button data-mode="tour" class="on">🧭 명소 여행</button>
     <button data-mode="race">🏁 링 레이스 <small id="menu-best"></small></button>
+    <button id="daynight">☀️ 낮</button>
   </div>
   <p id="mode-desc"></p>
   <div id="keys">
     <kbd>←</kbd><kbd>→</kbd> 또는 <kbd>A</kbd><kbd>D</kbd> 방향 전환 &nbsp;·&nbsp;
     <kbd>↑</kbd><kbd>↓</kbd> 또는 <kbd>W</kbd><kbd>S</kbd> 상승 / 하강<br>
-    <kbd>Shift</kbd> 부스트 (🦐 새우깡을 먹으면 충전) &nbsp;·&nbsp; <kbd>R</kbd> 다시 시작<br>
-    <kbd>C</kbd> 1인칭 / 3인칭 &nbsp;·&nbsp; <kbd>M</kbd> 소리 켜기/끄기 &nbsp;·&nbsp; <kbd>Esc</kbd> 메뉴<br>
+    <kbd>Shift</kbd> 부스트 (쉬면 천천히 충전, 🦐 새우깡은 바로 충전) &nbsp;·&nbsp; <kbd>R</kbd> 다시 시작<br>
+    <kbd>C</kbd> 1인칭 / 3인칭 &nbsp;·&nbsp; <kbd>N</kbd> 낮 / 밤 &nbsp;·&nbsp; <kbd>M</kbd> 소리 켜기/끄기 &nbsp;·&nbsp; <kbd>Esc</kbd> 메뉴<br>
     <small>갈매기는 앞으로 계속 날아가요. 방향키로 방향과 높이를 조종하세요!</small>
   </div>
   <div id="google-box">
@@ -225,7 +268,8 @@ scene.fog = new THREE.Fog(SKY, 2500, 9500);
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 1, 16000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(innerWidth, innerHeight);
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+const IS_TOUCH = matchMedia('(pointer: coarse)').matches; // 휴대폰·태블릿
+renderer.setPixelRatio(Math.min(devicePixelRatio, IS_TOUCH ? 1.5 : 2));
 document.body.prepend(renderer.domElement);
 addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
@@ -234,7 +278,8 @@ addEventListener('resize', () => {
   tiles?.setResolutionFromRenderer(camera, renderer);
 });
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.0));
+const hemi = new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.0);
+scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff4e0, 0.7);
 sun.position.set(-3000, 6000, 2000);
 scene.add(sun);
@@ -408,6 +453,7 @@ async function startGoogle(apiKey) {
   }));
   tiles.registerPlugin(new TileCompressionPlugin());
   tiles.registerPlugin(new TilesFadePlugin());
+  if (IS_TOUCH) tiles.errorTarget = Math.max(tiles.errorTarget, 30); // 휴대폰은 조금 덜 세밀하게 (메모리 절약)
   // 게임 좌표 원점(지도 중심)에 Google 지구를 맞춤. 플러그인은 X=서쪽, Z=북쪽이라 180° 돌려 X=동쪽, Z=남쪽으로
   tiles.registerPlugin(new ReorientationPlugin({
     lat: centerLat * Math.PI / 180, lon: centerLon * Math.PI / 180, height: GEOID,
@@ -416,6 +462,7 @@ async function startGoogle(apiKey) {
   holder.rotation.y = Math.PI;
   holder.add(tiles.group);
   scene.add(holder);
+  tiles.addEventListener('load-model', e => tintTiles(e.scene));
   tiles.setCamera(camera);
   tiles.setResolutionFromRenderer(camera, renderer);
 
@@ -553,7 +600,7 @@ function updateRace() {
 // ================= 새우깡 (부스트 충전 아이템) =================
 const CHIP_COUNT = 120;
 const chips = [];
-let stamina = 100, chipsEaten = 0;
+let stamina = 100, chipsEaten = 0, lastBoostTime = -10;
 const chipMat = (() => {
   const cv = document.createElement('canvas');
   cv.width = cv.height = 128;
@@ -763,6 +810,109 @@ function makeSeagull() {
 const bird = makeSeagull();
 scene.add(bird);
 
+// ================= 야간 모드 =================
+let night = false;
+const DAY_SKY = new THREE.Color(0xa9d3f5), NIGHT_SKY = new THREE.Color(0x0a1330);
+const NIGHT_TINT = new THREE.Color(0x46557a); // 밤에 Google 3D 지도(조명 영향을 안 받음)를 어둡게 칠하는 색
+
+function glowTexture(inner, outer) {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 64;
+  const ctx = cv.getContext('2d');
+  const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, inner); g.addColorStop(0.35, outer); g.addColorStop(1, '#0000');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 64, 64);
+  return makeTexture(cv);
+}
+
+// 별 (카메라를 따라다니는 큰 반구)
+const stars = (() => {
+  const pos = [];
+  for (let i = 0; i < 1800; i++) {
+    const a = Math.random() * Math.PI * 2, e = Math.asin(Math.random()) * 0.95 + 0.03;
+    pos.push(Math.cos(a) * Math.cos(e) * 12000, Math.sin(e) * 12000, Math.sin(a) * Math.cos(e) * 12000);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  const p = new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, fog: false }));
+  p.visible = false;
+  scene.add(p);
+  return p;
+})();
+const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture('#fffbe8', '#fff3c480'), fog: false }));
+moon.scale.setScalar(900);
+moon.visible = false;
+scene.add(moon);
+
+// 도시 불빛: 건물 벽의 창문 불빛 + 땅 위 가로등
+let cityLights = null;
+function buildNightLights() {
+  const pos = [], col = [];
+  const warm = [1, 0.82, 0.45], white = [0.85, 0.92, 1], street = [1, 0.62, 0.25];
+  for (const b of DATA.buildings) {
+    const pts = [];
+    for (let i = 1; i < b.length; i += 2) pts.push(toWorld(b[i], b[i + 1]));
+    if (pts.length < 3) continue;
+    const ground = heightAt(pts[0].x, pts[0].z);
+    const n = THREE.MathUtils.clamp(Math.round(b[0] / 8), 2, 16);
+    for (let k = 0; k < n; k++) {
+      const i = Math.floor(Math.random() * pts.length), a = pts[i], c = pts[(i + 1) % pts.length], t = Math.random();
+      // 벽에서 1.5m 바깥(건물 중심 반대쪽)에 띄워야 벽에 묻히지 않음
+      const x = a.x + (c.x - a.x) * t, z = a.z + (c.z - a.z) * t;
+      const ox = x - pts[0].x - (pts[Math.floor(pts.length / 2)].x - pts[0].x) / 2;
+      const oz = z - pts[0].z - (pts[Math.floor(pts.length / 2)].z - pts[0].z) / 2;
+      const ol = Math.hypot(ox, oz) || 1;
+      pos.push(x + ox / ol * 1.5, ground + 3 + Math.random() * Math.max(1, b[0] - 5), z + oz / ol * 1.5);
+      col.push(...(Math.random() < 0.7 ? warm : white));
+    }
+  }
+  for (let k = 0; k < 7000; k++) {
+    const x = THREE.MathUtils.randFloat(BOUND.minX, BOUND.maxX), z = THREE.MathUtils.randFloat(BOUND.minZ, BOUND.maxZ);
+    const g = heightAt(x, z);
+    if (g <= 1 || g > 250) continue; // 바다·강과 높은 산에는 가로등 없음
+    pos.push(x, g + 8, z);
+    col.push(...street);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  cityLights = new THREE.Points(geo, new THREE.PointsMaterial({
+    size: 26, map: glowTexture('#ffffff', '#ffffff90'), vertexColors: true, transparent: true,
+    depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+  }));
+  cityLights.visible = night;
+  scene.add(cityLights);
+}
+
+function tintTiles(root) {
+  root.traverse(o => {
+    if (!o.material) return;
+    for (const m of [].concat(o.material)) {
+      if (!m.color) continue;
+      m.userData.dayColor ??= m.color.clone();
+      m.color.copy(night ? NIGHT_TINT : m.userData.dayColor);
+    }
+  });
+}
+
+function setNight(on) {
+  night = on;
+  scene.background.copy(on ? NIGHT_SKY : DAY_SKY);
+  scene.fog.color.copy(scene.background);
+  hemi.intensity = on ? 0.3 : 1.0;
+  hemi.color.set(on ? 0x8899cc : 0xffffff);
+  sun.intensity = on ? 0.25 : 0.7;
+  sun.color.set(on ? 0xaabbff : 0xfff4e0); // 밤엔 푸른 달빛
+  stars.visible = moon.visible = on;
+  if (cityLights) cityLights.visible = on;
+  if (tiles) tintTiles(tiles.group);
+  bird.traverse(o => o.material?.emissive?.set(on ? 0x2a2a33 : 0x000000)); // 밤에도 갈매기가 보이도록
+  $('daynight').textContent = on ? '🌙 밤' : '☀️ 낮';
+  $('daynight').classList.toggle('on', on);
+  if (playing) toast(on ? '🌙 야간 비행' : '☀️ 낮 비행');
+}
+$('daynight').onclick = () => setNight(!night);
+
 // ================= 입력 =================
 const keys = {};
 let anyKeyPressed = false;
@@ -775,6 +925,7 @@ addEventListener('keydown', e => {
   if (!playing) return;
   if (e.code === 'KeyR') gameMode === 'race' ? startRace() : resetBird();
   if (e.code === 'KeyC') firstPerson = !firstPerson;
+  if (e.code === 'KeyN') setNight(!night);
   if (e.code === 'KeyM') {
     muted = !muted;
     if (audio) audio.master.gain.value = muted ? 0 : 0.6;
@@ -862,12 +1013,18 @@ const camTarget = new THREE.Vector3();
 let lodTimer = 0;
 
 function update(dt, t) {
-  const turn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
-  const climb = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
-  const wantBoost = keys.ShiftLeft || keys.ShiftRight;
+  const dz = v => Math.abs(v) < 0.12 ? 0 : v; // 조이스틱 가운데 살짝은 무시
+  const turn = THREE.MathUtils.clamp((keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0) - dz(joy.x), -1, 1);
+  const climb = THREE.MathUtils.clamp((keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) - dz(joy.y), -1, 1);
+  const wantBoost = keys.ShiftLeft || keys.ShiftRight || touchBoost;
   const boost = wantBoost && stamina > 0;
-  if (boost) stamina = Math.max(0, stamina - 12 * dt);
-  if (wantBoost && stamina <= 0 && (!toastTimer || $('toast').style.opacity == 0)) toast('🦐 부스트가 비었어요!<small>새우깡을 먹어서 채우세요</small>');
+  if (boost) {
+    stamina = Math.max(0, stamina - 12 * dt);
+    lastBoostTime = elapsed;
+  } else if (elapsed - lastBoostTime > 1) {
+    stamina = Math.min(100, stamina + 5 * dt); // 부스트를 1초 이상 안 쓰면 천천히 충전 (꽉 차는 데 약 20초)
+  }
+  if (wantBoost && stamina <= 0 && (!toastTimer || $('toast').style.opacity == 0)) toast('🦐 부스트가 비었어요!<small>잠깐 쉬면 천천히 차오르고, 새우깡을 먹으면 바로 채워져요</small>');
 
   flight.yaw += turn * 1.1 * dt;
   flight.roll += (turn * 0.6 - flight.roll) * Math.min(1, dt * 4);
@@ -971,6 +1128,10 @@ function loop() {
     tiles.update();
     if ((creditTimer -= dt) < 0) { creditTimer = 1; updateGoogleCredit(); }
   }
+  if (night) {
+    stars.position.copy(camera.position);
+    moon.position.set(camera.position.x - 5000, camera.position.y + 6000, camera.position.z - 7000);
+  }
   renderer.render(scene, camera);
 }
 
@@ -984,6 +1145,7 @@ loop();
   addPlaces();
   buildRings();
   buildChips();
+  buildNightLights();
   buildMinimapBg();
   setMode(gameMode);
   resetBird();
@@ -991,12 +1153,21 @@ loop();
   $('start-google').disabled = $('start-basic').disabled = false;
 })();
 
-try { $('apikey').value = localStorage.getItem('googleMapsKey') || ''; } catch {}
+let savedKey = '';
+try { savedKey = localStorage.getItem('googleMapsKey') || ''; } catch {}
+$('apikey').value = savedKey;
 
-// config.js에 토큰이 들어 있으면 입력칸 없이 바로 Google 3D로 시작
+// config.js에 공유 토큰이 있으면 입력칸 없이 바로 Google 3D로 시작
+// (이 브라우저에 내 개인 토큰을 따로 저장해 뒀다면 그걸 먼저 씀)
 const BUILT_IN_TOKEN = (window.GAME_CONFIG?.cesiumToken || '').trim();
-if (BUILT_IN_TOKEN) {
-  $('google-box').innerHTML = '🌏 <b>Google 실사 3D 지도</b> 준비 완료! 바로 시작하세요';
+const tokenBoxHTML = $('google-box').innerHTML;
+let useBuiltIn = !!BUILT_IN_TOKEN && !savedKey;
+if (useBuiltIn) $('google-box').innerHTML = '🌏 <b>Google 실사 3D 지도</b> 준비 완료! 바로 시작하세요';
+
+function showTokenInput() {
+  useBuiltIn = false;
+  $('google-box').innerHTML = tokenBoxHTML;
+  $('apikey').value = savedKey;
 }
 
 // ---------- 모드 선택 (명소 여행 / 링 레이스) ----------
@@ -1006,20 +1177,60 @@ const MODE_DESC = {
 };
 function setMode(m) {
   gameMode = m;
-  document.querySelectorAll('.modes button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  document.querySelectorAll('.modes button[data-mode]').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
   $('mode-desc').textContent = MODE_DESC[m];
   $('menu-best').textContent = bestTime ? `(최고 ${fmtTime(bestTime)})` : '';
   for (const pl of places) pl.beam.visible = pl.label.visible = m === 'tour';
   refreshRings();
 }
-document.querySelectorAll('.modes button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+document.querySelectorAll('.modes button[data-mode]').forEach(b => b.onclick = () => setMode(b.dataset.mode));
 setMode('tour');
+
+// ---------- 휴대폰 터치 조작 ----------
+const joy = { x: 0, y: 0, id: null };
+let touchBoost = false;
+if (IS_TOUCH) {
+  document.body.classList.add('touch');
+  $('keys').innerHTML = '🕹️ <b>왼쪽 조이스틱</b>: 좌우로 밀면 방향 전환, 위아래로 밀면 상승/하강<br>'
+    + '🚀 <b>오른쪽 버튼</b>을 누르고 있으면 부스트 &nbsp;·&nbsp; 🎥 시점 · 🌙 낮/밤 · ⏸ 메뉴<br>'
+    + '<small>갈매기는 앞으로 계속 날아가요. 가로 화면을 추천해요!</small>';
+}
+const joyEl = $('joy'), knob = $('knob');
+function moveJoy(e) {
+  const r = joyEl.getBoundingClientRect(), R = r.width / 2;
+  let dx = e.clientX - (r.left + R), dy = e.clientY - (r.top + R);
+  const l = Math.hypot(dx, dy);
+  if (l > R) { dx *= R / l; dy *= R / l; }
+  joy.x = dx / R; joy.y = dy / R;
+  knob.style.transform = `translate(${dx}px, ${dy}px)`;
+}
+function endJoy(e) {
+  if (e.pointerId !== joy.id) return;
+  joy.id = null; joy.x = joy.y = 0;
+  knob.style.transform = '';
+}
+const capture = (el, e) => { try { el.setPointerCapture(e.pointerId); } catch {} }; // 손가락이 버튼 밖으로 나가도 계속 추적
+joyEl.addEventListener('pointerdown', e => { joy.id = e.pointerId; capture(joyEl, e); moveJoy(e); e.preventDefault(); });
+joyEl.addEventListener('pointermove', e => { if (e.pointerId === joy.id) moveJoy(e); });
+joyEl.addEventListener('pointerup', endJoy);
+joyEl.addEventListener('pointercancel', endJoy);
+const boostBtn = $('boost-btn');
+const setBoost = on => { touchBoost = on; boostBtn.classList.toggle('on', on); };
+boostBtn.addEventListener('pointerdown', e => { capture(boostBtn, e); setBoost(true); e.preventDefault(); });
+for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) boostBtn.addEventListener(ev, () => setBoost(false));
+document.querySelectorAll('#tbtns button').forEach(b => b.addEventListener('click', () => {
+  if (b.dataset.act === 'cam') firstPerson = !firstPerson;
+  if (b.dataset.act === 'night') setNight(!night);
+  if (b.dataset.act === 'menu') openMenu();
+}));
+addEventListener('contextmenu', e => { if (IS_TOUCH) e.preventDefault(); }); // 길게 누를 때 메뉴 뜨지 않게
 
 function openMenu() {
   playing = false;
   setMode(gameMode);
   $('overlay').classList.remove('hidden');
-  for (const id of ['hud', 'nav', 'timer', 'minimap', 'hint']) $(id).classList.add('hidden');
+  for (const id of ['hud', 'nav', 'timer', 'minimap', 'hint', 'touch']) $(id).classList.add('hidden');
+  setBoost(false);
   $('status').textContent = '⏸ 일시정지 — 모드를 바꾸거나 다시 시작하세요';
 }
 
@@ -1041,7 +1252,11 @@ function beginTrip(msg) {
   document.activeElement?.blur();
   renderer.domElement.focus(); // 바로 방향키가 먹히도록 게임 화면에 포커스
   toast(msg);
-  setTimeout(() => { if (!anyKeyPressed) $('hint').classList.remove('hidden'); }, 4000);
+  if (IS_TOUCH) {
+    $('touch').classList.remove('hidden');
+    // 안드로이드: 전체 화면 + 가로 고정 시도 (아이폰은 지원하지 않아 그냥 넘어감)
+    document.documentElement.requestFullscreen?.().then(() => screen.orientation?.lock?.('landscape')).catch(() => {});
+  } else setTimeout(() => { if (!anyKeyPressed) $('hint').classList.remove('hidden'); }, 4000);
 }
 
 $('start-basic').onclick = () => {
@@ -1054,9 +1269,9 @@ $('start-basic').onclick = () => {
 };
 
 $('start-google').onclick = async () => {
-  const key = BUILT_IN_TOKEN || $('apikey').value.trim();
+  const key = useBuiltIn ? BUILT_IN_TOKEN : $('apikey').value.trim();
   if (!key) { $('status').textContent = '⚠️ 토큰이나 API 키를 먼저 붙여넣어 주세요'; $('apikey').focus(); return; }
-  if (!BUILT_IN_TOKEN) try { localStorage.setItem('googleMapsKey', key); } catch {}
+  if (!useBuiltIn) try { localStorage.setItem('googleMapsKey', savedKey = key); } catch {}
   $('start-google').disabled = $('start-basic').disabled = true;
   $('status').textContent = 'Google 3D 지도에 연결하는 중…';
   let ok = !!tiles; // 이미 연결돼 있으면 그대로 사용
@@ -1064,7 +1279,11 @@ $('start-google').onclick = async () => {
   $('start-google').disabled = $('start-basic').disabled = false;
   if (!ok) {
     stopGoogle();
-    $('status').textContent = '⚠️ Google 3D 지도를 불러오지 못했어요. 토큰(키)을 다시 확인해 주세요';
+    if (useBuiltIn) {
+      // 공유 토큰은 허용 주소(배포된 사이트)에서만 동작함 → 파일로 열거나 localhost면 여기로 옴
+      showTokenInput();
+      $('status').textContent = '⚠️ 공유 토큰은 배포된 GitHub 사이트에서만 동작해요. 여기서는 내 개인 토큰을 넣거나 🗺️ 기본 지도로 시작하세요';
+    } else $('status').textContent = '⚠️ Google 3D 지도를 불러오지 못했어요. 토큰(키)을 다시 확인해 주세요';
     return;
   }
   useGoogle = true;
