@@ -1,0 +1,1080 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>갈매기의 북구 여행</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #a9d3f5; font-family: "Segoe UI", "Malgun Gothic", sans-serif; }
+  #hud { position: fixed; top: 14px; left: 14px; color: #fff; font-size: 15px; line-height: 1.7;
+         background: #0006; padding: 10px 14px; border-radius: 10px; pointer-events: none; }
+  #nav { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); color: #fff; text-align: center;
+         background: #0006; padding: 8px 18px; border-radius: 12px; pointer-events: none; min-width: 220px; }
+  #nav .name { font-size: 20px; font-weight: bold; }
+  #nav .sub { font-size: 13px; opacity: .85; }
+  #arrow { font-size: 34px; display: inline-block; transition: transform .1s linear; color: #ffd54a; }
+  #toast { position: fixed; top: 30%; left: 50%; transform: translateX(-50%); color: #fff; font-size: 30px; font-weight: bold;
+           background: #000a; padding: 16px 32px; border-radius: 14px; text-align: center; opacity: 0; transition: opacity .4s; pointer-events: none; }
+  #toast small { display: block; font-size: 16px; font-weight: normal; margin-top: 6px; }
+  #credit { position: fixed; bottom: 6px; right: 10px; color: #fff; font-size: 11px; text-shadow: 0 1px 2px #000; pointer-events: none; }
+  #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+             background: linear-gradient(#1d4f7acc, #0b2236ee); color: #fff; text-align: center; padding: 16px; }
+  #overlay h1 { font-size: 40px; margin: 0 0 10px; }
+  #overlay p { font-size: 17px; margin: 6px; opacity: .92; }
+  #keys { margin: 14px 0; font-size: 15px; line-height: 1.9; background: #ffffff18; padding: 12px 22px; border-radius: 12px; }
+  kbd { background: #fff; color: #222; border-radius: 4px; padding: 1px 7px; font-family: inherit; font-weight: bold; }
+  #status { font-size: 14px; opacity: .85; min-height: 20px; }
+  .cities { display: flex; gap: 10px; margin: 4px 0 12px; }
+  .cities a { color: #fff; text-decoration: none; padding: 6px 16px; border-radius: 20px; background: #ffffff22; font-size: 16px; }
+  .cities a.on { background: #ffd54a; color: #222; font-weight: bold; }
+  #google-box { margin-top: 14px; background: #ffffff18; padding: 12px 18px; border-radius: 12px; font-size: 14px; max-width: 520px; }
+  #apikey { width: 100%; box-sizing: border-box; margin-top: 8px; padding: 8px 10px; border-radius: 8px; border: 0; font-size: 14px; }
+  .btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-top: 16px; }
+  .btns button { font-size: 18px; padding: 12px 26px; border: 0; border-radius: 10px; cursor: pointer; font-weight: bold; }
+  #start-google { background: #ffd54a; color: #222; }
+  #start-basic { background: #ffffffcc; color: #222; }
+  .btns button:disabled { background: #888; cursor: wait; }
+  #hint { position: fixed; bottom: 34px; left: 50%; transform: translateX(-50%); color: #fff; background: #000a;
+          padding: 8px 16px; border-radius: 10px; font-size: 15px; pointer-events: none; }
+  @media (max-width: 760px) {
+    #nav { top: auto; bottom: 40px; }
+    #hud { font-size: 13px; }
+  }
+  .gauge { width: 150px; height: 10px; background: #ffffff33; border-radius: 6px; overflow: hidden; display: inline-block; vertical-align: middle; }
+  #stamina { height: 100%; width: 100%; background: linear-gradient(90deg, #ff9800, #ffd54a); transition: width .15s; }
+  #stamina.low { background: #ff5252; }
+  #timer { position: fixed; top: 14px; right: 14px; color: #fff; font-size: 26px; font-weight: bold; font-variant-numeric: tabular-nums;
+           background: #0006; padding: 8px 16px; border-radius: 10px; pointer-events: none; }
+  #timer small { display: block; font-size: 12px; font-weight: normal; opacity: .85; }
+  #minimap { position: fixed; left: 14px; bottom: 30px; width: 170px; height: 170px; border-radius: 12px;
+             border: 2px solid #ffffff88; box-shadow: 0 2px 8px #0006; pointer-events: none; }
+  .modes { display: flex; gap: 10px; margin: 10px 0 4px; }
+  .modes button { font-size: 16px; padding: 8px 18px; border-radius: 20px; border: 2px solid #ffffff55; background: #ffffff18; color: #fff; cursor: pointer; }
+  .modes button.on { background: #fff; color: #123; font-weight: bold; border-color: #fff; }
+  .modes small { font-size: 12px; opacity: .8; }
+  @media (max-width: 760px) { #minimap { width: 110px; height: 110px; bottom: 120px; } }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div id="hud" class="hidden">
+  📍 방문: <b id="visited">0</b> / <b id="total">0</b><br>
+  ⛰️ 고도: <b id="alt">0</b> m<br>
+  💨 속도: <b id="spd">0</b> km/h<br>
+  🦐 부스트 <span class="gauge"><span id="stamina" style="display:block"></span></span> 새우깡 <b id="chips">0</b>개<br>
+  <span id="bstat"></span>
+</div>
+<div id="nav" class="hidden">
+  <div class="sub" id="navsub">다음 목적지</div>
+  <div><span id="arrow">⬆</span></div>
+  <div class="name" id="tname">-</div>
+  <div class="sub" id="tdist">-</div>
+</div>
+<div id="toast"></div>
+<div id="timer" class="hidden">⏱ 0:00.00<small id="besttime"></small></div>
+<canvas id="minimap" class="hidden" width="340" height="340"></canvas>
+<div id="hint" class="hidden">🖱️ 화면을 한 번 클릭한 뒤 방향키를 눌러보세요</div>
+<div id="credit">위성사진 © Esri, Maxar, Earthstar Geographics · 지형 © AWS Terrain Tiles (Mapzen) · 건물·장소 © OpenStreetMap contributors</div>
+
+<div id="overlay">
+  <div class="cities">
+    <a href="?city=busan" id="city-busan">🇰🇷 부산 북구</a>
+    <a href="?city=tokyo" id="city-tokyo">🇯🇵 도쿄</a>
+  </div>
+  <h1 id="headline">🕊️ 갈매기의 여행</h1>
+  <p><span id="hero"></span></p>
+  <div class="modes">
+    <button data-mode="tour" class="on">🧭 명소 여행</button>
+    <button data-mode="race">🏁 링 레이스 <small id="menu-best"></small></button>
+  </div>
+  <p id="mode-desc"></p>
+  <div id="keys">
+    <kbd>←</kbd><kbd>→</kbd> 또는 <kbd>A</kbd><kbd>D</kbd> 방향 전환 &nbsp;·&nbsp;
+    <kbd>↑</kbd><kbd>↓</kbd> 또는 <kbd>W</kbd><kbd>S</kbd> 상승 / 하강<br>
+    <kbd>Shift</kbd> 부스트 (🦐 새우깡을 먹으면 충전) &nbsp;·&nbsp; <kbd>R</kbd> 다시 시작<br>
+    <kbd>C</kbd> 1인칭 / 3인칭 &nbsp;·&nbsp; <kbd>M</kbd> 소리 켜기/끄기 &nbsp;·&nbsp; <kbd>Esc</kbd> 메뉴<br>
+    <small>갈매기는 앞으로 계속 날아가요. 방향키로 방향과 높이를 조종하세요!</small>
+  </div>
+  <div id="google-box">
+    🌏 <b>Google 실사 3D 지도</b> (실제 건물 외관까지 보여요)<br>
+    <b>Cesium ion 토큰</b>(무료, 카드 필요 없음) 또는 <b>Google Map Tiles API 키</b>를 붙여넣으세요.<br>
+    이 브라우저에만 저장돼요.
+    <input id="apikey" type="password" placeholder="Cesium 토큰(eyJ...) 또는 Google 키(AIza...)" autocomplete="off">
+  </div>
+  <div id="status">지형 데이터 불러오는 중…</div>
+  <div class="btns">
+    <button id="start-google" disabled>🌏 Google 3D로 시작</button>
+    <button id="start-basic" disabled>🗺️ 기본 지도로 시작</button>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+// 도시 설정 — 주소 뒤에 ?city=tokyo 처럼 붙여 선택
+window.CITIES = {
+  busan: {
+    title: '부산 북구', hero: '부산의 시조 갈매기가 되어 실제 북구 하늘을 날아보세요!',
+    data: 'bukgu-data.js', dataVar: 'BUKGU_DATA',
+    area: { west: 128.962, east: 129.078, south: 35.172, north: 35.298 },
+    start: [129.0080, 35.2180], // 덕천·구포 사이 상공
+    geoid: 27,                  // 지오이드 높이(m): Google 타원체 높이 → 해발 고도 보정
+    boxesWithGoogle: true,      // 한국은 Google 3D 건물이 없어서 OSM 건물 상자를 같이 보여줌
+    // 링 레이스: 구포역 → 낙동강 → 화명생태공원 → 금곡 → 화명수목원 → 금정산 능선 → 만덕 → 덕천
+    race: [
+      [128.9973, 35.2053, 120], [128.9955, 35.2200, 70], [129.0040, 35.2330, 70], [129.0110, 35.2500, 120],
+      [129.0170, 35.2674, 150], [129.0408, 35.2525, 150], [129.0450, 35.2330, 150], [129.0365, 35.2130, 120],
+      [129.0053, 35.2100, 120],
+    ],
+  },
+  tokyo: {
+    title: '도쿄', hero: '갈매기가 되어 실제 도쿄 하늘을 날아보세요!',
+    data: 'tokyo-data.js', dataVar: 'TOKYO_DATA',
+    area: { west: 139.680, east: 139.825, south: 35.620, north: 35.722 },
+    start: [139.7560, 35.6760], // 히비야·황거 근처 상공
+    geoid: 37,
+    boxesWithGoogle: false,     // 도쿄는 Google 실사 3D 건물이 있음
+    // 링 레이스: 도쿄 타워 → 레인보우 브리지 → 오다이바 → 츠키지 → 도쿄역 → 아키하바라 → 아사쿠사 → 스카이트리
+    race: [
+      [139.7480, 35.6586, 200], [139.7570, 35.6480, 150], [139.7660, 35.6375, 180], [139.7737, 35.6300, 80],
+      [139.7720, 35.6550, 150], [139.7660, 35.6812, 250], [139.7740, 35.6985, 200], [139.7900, 35.7110, 150],
+      [139.8090, 35.7100, 350],
+    ],
+  },
+};
+window.CITY = CITIES[new URLSearchParams(location.search).get('city')] ? new URLSearchParams(location.search).get('city') : 'busan';
+document.write(`<script src="${CITIES[CITY].data}"><\/script>`);
+</script>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/",
+  "3d-tiles-renderer/three": "https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.5.3/build/index.three.js",
+  "3d-tiles-renderer/plugins": "https://cdn.jsdelivr.net/npm/3d-tiles-renderer@0.5.3/build/index.plugins.js"
+} }
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const $ = id => document.getElementById(id);
+const CITY_CFG = window.CITIES[window.CITY];
+document.title = `갈매기의 ${CITY_CFG.title} 여행`;
+$('headline').textContent = `🕊️ 갈매기의 ${CITY_CFG.title} 여행`;
+$('hero').textContent = CITY_CFG.hero;
+$('city-' + window.CITY).classList.add('on');
+
+// ================= 지도 좌표계 =================
+const AREA = CITY_CFG.area; // 비행 구역 (위도/경도)
+const Z = 14, TS = 256; // 지형 타일 줌 레벨
+
+const lon2px = lon => (lon + 180) / 360 * 2 ** Z * TS;
+const lat2px = lat => {
+  const r = lat * Math.PI / 180;
+  return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * 2 ** Z * TS;
+};
+const tx0 = Math.floor(lon2px(AREA.west) / TS), tx1 = Math.floor(lon2px(AREA.east) / TS);
+const ty0 = Math.floor(lat2px(AREA.north) / TS), ty1 = Math.floor(lat2px(AREA.south) / TS);
+const NX = tx1 - tx0 + 1, NY = ty1 - ty0 + 1;
+const W = NX * TS, H = NY * TS;           // 전체 높이맵 크기(픽셀)
+const gx0 = tx0 * TS, gy0 = ty0 * TS;     // 전체 픽셀 좌표 원점
+const cxp = gx0 + W / 2, cyp = gy0 + H / 2;
+const centerLon = cxp / (2 ** Z * TS) * 360 - 180;
+const centerLat = Math.atan(Math.sinh(Math.PI * (1 - 2 * cyp / (2 ** Z * TS)))) * 180 / Math.PI;
+const MPP = 40075016.686 * Math.cos(centerLat * Math.PI / 180) / (2 ** Z * TS); // 픽셀당 미터
+
+// 위도/경도 → 게임 월드 좌표(미터). x = 동쪽, z = 남쪽
+const toWorld = (lon, lat) => ({ x: (lon2px(lon) - cxp) * MPP, z: (lat2px(lat) - cyp) * MPP });
+const BOUND = { minX: (gx0 - cxp) * MPP + 400, maxX: (gx0 + W - cxp) * MPP - 400,
+                minZ: (gy0 - cyp) * MPP + 400, maxZ: (gy0 + H - cyp) * MPP - 400 };
+
+// 높이맵 (해발 고도, 미터)
+const heights = new Float32Array(W * H);
+function heightAtPixel(px, py) {
+  px = Math.min(Math.max(px, 0), W - 1.001);
+  py = Math.min(Math.max(py, 0), H - 1.001);
+  const x = Math.floor(px), y = Math.floor(py), fx = px - x, fy = py - y;
+  const i = y * W + x;
+  const a = heights[i], b = heights[i + 1], c = heights[i + W], d = heights[i + W + 1];
+  return (a * (1 - fx) + b * fx) * (1 - fy) + (c * (1 - fx) + d * fx) * fy;
+}
+const heightAt = (x, z) => heightAtPixel(x / MPP + cxp - gx0, z / MPP + cyp - gy0);
+
+// ================= 이미지 로더 (동시 요청 수 제한) =================
+const queue = []; let active = 0;
+function loadImage(url, urgent = false) {
+  return new Promise((res, rej) => { (urgent ? queue.unshift : queue.push).call(queue, { url, res, rej }); pump(); });
+}
+function pump() {
+  while (active < 10 && queue.length) {
+    const job = queue.shift(); active++;
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { active--; job.res(img); pump(); };
+    img.onerror = () => { active--; job.rej(new Error(job.url)); pump(); };
+    img.src = job.url;
+  }
+}
+const terrainUrl = (x, y) => `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${Z}/${x}/${y}.png`;
+const imageryUrl = (z, x, y) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+
+// ================= Three.js 기본 =================
+const scene = new THREE.Scene();
+const SKY = 0xa9d3f5;
+scene.background = new THREE.Color(SKY);
+scene.fog = new THREE.Fog(SKY, 2500, 9500);
+
+const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 1, 16000);
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+document.body.prepend(renderer.domElement);
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  tiles?.setResolutionFromRenderer(camera, renderer);
+});
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.0));
+const sun = new THREE.DirectionalLight(0xfff4e0, 0.7);
+sun.position.set(-3000, 6000, 2000);
+scene.add(sun);
+const terrainMap = new THREE.Group(); // 기본 지도의 위성사진 지형 (Google 모드에서는 숨김)
+scene.add(terrainMap);
+const maxAniso = renderer.capabilities.getMaxAnisotropy();
+function makeTexture(canvas) {
+  const t = new THREE.CanvasTexture(canvas);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = maxAniso;
+  return t;
+}
+
+// ================= 지형 =================
+const SEG = 64, STEP = TS / SEG;
+const chunks = [];
+
+async function loadTerrain() {
+  let done = 0;
+  const tmp = document.createElement('canvas');
+  tmp.width = tmp.height = TS;
+  const tctx = tmp.getContext('2d', { willReadFrequently: true });
+  const jobs = [];
+  for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+    jobs.push(loadImage(terrainUrl(tx, ty)).then(img => {
+      tctx.drawImage(img, 0, 0);
+      const data = tctx.getImageData(0, 0, TS, TS).data;
+      const ox = (tx - tx0) * TS, oy = (ty - ty0) * TS;
+      for (let y = 0; y < TS; y++) for (let x = 0; x < TS; x++) {
+        const i = (y * TS + x) * 4;
+        const h = data[i] * 256 + data[i + 1] + data[i + 2] / 256 - 32768;
+        heights[(oy + y) * W + ox + x] = Math.max(h, 0);
+      }
+    }).catch(() => {}).finally(() => {
+      $('status').textContent = `지형 데이터 불러오는 중… ${++done} / ${NX * NY}`;
+    }));
+  }
+  await Promise.all(jobs);
+}
+
+function buildTerrainChunks() {
+  for (let cy = 0; cy < NY; cy++) for (let cx = 0; cx < NX; cx++) {
+    const pos = new Float32Array((SEG + 1) ** 2 * 3);
+    const uv = new Float32Array((SEG + 1) ** 2 * 2);
+    for (let l = 0, v = 0; l <= SEG; l++) for (let k = 0; k <= SEG; k++, v++) {
+      const px = cx * TS + k * STEP, py = cy * TS + l * STEP;
+      pos[v * 3] = (gx0 + px - cxp) * MPP;
+      pos[v * 3 + 1] = heightAtPixel(px, py);
+      pos[v * 3 + 2] = (gy0 + py - cyp) * MPP;
+      uv[v * 2] = k / SEG;
+      uv[v * 2 + 1] = 1 - l / SEG;
+    }
+    const idx = [];
+    for (let l = 0; l < SEG; l++) for (let k = 0; k < SEG; k++) {
+      const a = l * (SEG + 1) + k, b = a + SEG + 1, c = a + 1, d = b + 1;
+      idx.push(a, b, c, b, d, c);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+
+    // 위성사진: 먼저 저해상도(z15, 512px)로 깔고, 가까이 가면 고해상도(z16)로 교체
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 512;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#5d6b52';
+    ctx.fillRect(0, 0, 512, 512);
+    const mat = new THREE.MeshLambertMaterial({ map: makeTexture(canvas) });
+    const mesh = new THREE.Mesh(geo, mat);
+    terrainMap.add(mesh);
+
+    const tx = tx0 + cx, ty = ty0 + cy;
+    const chunk = { tx, ty, mesh, ctx, hi: false,
+      x: (gx0 + (cx + 0.5) * TS - cxp) * MPP, z: (gy0 + (cy + 0.5) * TS - cyp) * MPP };
+    chunks.push(chunk);
+    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) {
+      loadImage(imageryUrl(15, tx * 2 + i, ty * 2 + j)).then(img => {
+        chunk.ctx.drawImage(img, i * 256, j * 256, 256, 256);
+        mat.map.needsUpdate = true;
+      }).catch(() => {});
+    }
+  }
+}
+
+function upgradeChunk(chunk) {
+  chunk.hi = true;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(chunk.ctx.canvas, 0, 0, 1024, 1024);
+  const old = chunk.mesh.material.map;
+  const tex = makeTexture(canvas);
+  chunk.mesh.material.map = tex;
+  chunk.ctx = ctx;
+  old.dispose();
+  for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+    loadImage(imageryUrl(16, chunk.tx * 4 + i, chunk.ty * 4 + j), true).then(img => {
+      ctx.drawImage(img, i * 256, j * 256);
+      tex.needsUpdate = true;
+    }).catch(() => {});
+  }
+}
+
+// ================= 실제 건물·명소 데이터 (도시별 data 파일, © OpenStreetMap) =================
+const DATA = window[CITY_CFG.dataVar] || { places: [], buildings: [] };
+
+// ---------- 건물 ----------
+const buildingMat = new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide });
+
+let buildingMesh = null;
+function buildBuildings() {
+  const pos = [], col = [];
+  const c = new THREE.Color();
+  for (const b of DATA.buildings) {
+    const pts = [];
+    for (let i = 1; i < b.length; i += 2) pts.push(toWorld(b[i], b[i + 1]));
+    if (pts.length < 3) continue;
+    let ground = Infinity;
+    for (const p of pts) ground = Math.min(ground, heightAt(p.x, p.z));
+    const base = ground - 3, top = ground + b[0];
+    const tall = b[0] > 30;
+    c.setHSL(tall ? 0.09 : 0.08 + Math.random() * 0.05, tall ? 0.15 : 0.1, 0.72 + Math.random() * 0.15);
+    const push = (x, y, z) => { pos.push(x, y, z); col.push(c.r, c.g, c.b); };
+    // 벽
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i], d = pts[(i + 1) % pts.length];
+      push(a.x, base, a.z); push(d.x, base, d.z); push(d.x, top, d.z);
+      push(a.x, base, a.z); push(d.x, top, d.z); push(a.x, top, a.z);
+    }
+    // 지붕
+    const contour = pts.map(p => new THREE.Vector2(p.x, p.z));
+    for (const [i, j, k] of THREE.ShapeUtils.triangulateShape(contour, [])) {
+      push(pts[i].x, top, pts[i].z); push(pts[j].x, top, pts[j].z); push(pts[k].x, top, pts[k].z);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  buildingMesh = new THREE.Mesh(g, buildingMat);
+  scene.add(buildingMesh);
+  $('bstat').textContent = DATA.buildings.length
+    ? `🏢 실제 건물 ${DATA.buildings.length.toLocaleString()}개`
+    : `🏢 건물 데이터 파일(${CITY_CFG.data})이 없어요`;
+}
+
+// ================= Google 실사 3D 지도 =================
+// Google 타일은 타원체 높이를 쓰므로, 지역의 지오이드 높이만큼 내려 해발 고도에 맞춤
+const GEOID = CITY_CFG.geoid;
+let tiles = null, useGoogle = false, tileGround = -Infinity;
+const raycaster = new THREE.Raycaster();
+raycaster.firstHitOnly = true;
+const DOWN = new THREE.Vector3(0, -1, 0);
+
+async function startGoogle(apiKey) {
+  const { TilesRenderer } = await import('3d-tiles-renderer/three');
+  const { GoogleCloudAuthPlugin, CesiumIonAuthPlugin, GLTFExtensionsPlugin, TileCompressionPlugin, TilesFadePlugin, ReorientationPlugin } =
+    await import('3d-tiles-renderer/plugins');
+  const { DRACOLoader } = await import('three/addons/loaders/DRACOLoader.js');
+
+  tiles = new TilesRenderer();
+  // Google 키(AIza...)는 Google에 직접, 그 외에는 Cesium ion 토큰으로 보고
+  // ion에 등록된 Google 실사 3D 타일(asset 2275207)을 사용
+  tiles.registerPlugin(apiKey.startsWith('AIza')
+    ? new GoogleCloudAuthPlugin({ apiToken: apiKey, autoRefreshToken: true })
+    : new CesiumIonAuthPlugin({ apiToken: apiKey, assetId: 2275207, autoRefreshToken: true }));
+  tiles.registerPlugin(new GLTFExtensionsPlugin({
+    dracoLoader: new DRACOLoader().setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/libs/draco/gltf/'),
+  }));
+  tiles.registerPlugin(new TileCompressionPlugin());
+  tiles.registerPlugin(new TilesFadePlugin());
+  // 게임 좌표 원점(지도 중심)에 Google 지구를 맞춤. 플러그인은 X=서쪽, Z=북쪽이라 180° 돌려 X=동쪽, Z=남쪽으로
+  tiles.registerPlugin(new ReorientationPlugin({
+    lat: centerLat * Math.PI / 180, lon: centerLon * Math.PI / 180, height: GEOID,
+  }));
+  const holder = new THREE.Group();
+  holder.rotation.y = Math.PI;
+  holder.add(tiles.group);
+  scene.add(holder);
+  tiles.setCamera(camera);
+  tiles.setResolutionFromRenderer(camera, renderer);
+
+  return new Promise(resolve => {
+    tiles.addEventListener('load-root-tileset', () => resolve(true));
+    tiles.addEventListener('load-error', () => { if (!tiles?.root) resolve(false); });
+  });
+}
+
+function stopGoogle() {
+  if (!tiles) return;
+  tiles.group.parent?.removeFromParent();
+  tiles.dispose();
+  tiles = null;
+}
+
+// 갈매기 바로 아래의 Google 3D 표면(건물 지붕, 나무 포함) 높이
+function updateTileGround() {
+  raycaster.set(new THREE.Vector3(bird.position.x, bird.position.y + 400, bird.position.z), DOWN);
+  raycaster.far = 3000;
+  const hit = raycaster.intersectObject(tiles.group, true)[0];
+  tileGround = hit ? hit.point.y : -Infinity;
+}
+
+function updateGoogleCredit() {
+  const text = tiles.getAttributions()
+    .filter(a => a.type === 'string' && a.value).map(a => a.value).join(' · ');
+  $('credit').textContent = `3D 지도 © Google${text ? ' · ' + text : ''} · 장소 © OpenStreetMap contributors`;
+}
+
+const places = [];
+function labelSprite(text, color) {
+  const cv = document.createElement('canvas');
+  cv.width = 512; cv.height = 128;
+  const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#000000aa';
+  ctx.beginPath(); ctx.roundRect(4, 14, 504, 100, 30); ctx.fill();
+  ctx.font = 'bold 56px "Malgun Gothic", sans-serif';
+  ctx.fillStyle = color; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 66);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: makeTexture(cv), depthTest: false, fog: false }));
+  s.scale.set(220, 55, 1);
+  return s;
+}
+function addPlaces() {
+  for (const [name, desc, lon, lat, structH = 0] of DATA.places) {
+    const p = { name, desc, labelH: Math.max(180, structH + 70), reachH: Math.max(600, structH + 400) };
+    const w = toWorld(lon, lat);
+    const g = heightAt(w.x, w.z);
+    const beam = new THREE.Mesh(
+      new THREE.CylinderGeometry(10, 10, p.reachH - 100, 16, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xffd54a, transparent: true, opacity: 0.45,
+        blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide })
+    );
+    beam.position.set(w.x, g + (p.reachH - 100) / 2, w.z);
+    const label = labelSprite('📍 ' + p.name, '#ffd54a');
+    label.position.set(w.x, g + p.labelH, w.z);
+    scene.add(beam, label);
+    places.push({ ...p, x: w.x, z: w.z, ground: g, beam, label, visited: false });
+  }
+  $('total').textContent = places.length;
+}
+
+// ================= 링 레이스 =================
+const RING_R = 40;
+const ringNextMat = new THREE.MeshBasicMaterial({ color: 0xffd54a, transparent: true, opacity: 0.95, fog: false });
+const ringLaterMat = new THREE.MeshBasicMaterial({ color: 0x4fc3f7, transparent: true, opacity: 0.45 });
+const rings = [];
+const race = { idx: 0, start: null, done: false, time: 0 };
+const bestKey = `raceBest_${window.CITY}`;
+let bestTime = null;
+try { bestTime = Number(localStorage.getItem(bestKey)) || null; } catch {}
+
+function buildRings() {
+  const geo = new THREE.TorusGeometry(RING_R, 4, 12, 48);
+  for (const [lon, lat, agl] of CITY_CFG.race || []) {
+    const w = toWorld(lon, lat);
+    const mesh = new THREE.Mesh(geo, ringLaterMat);
+    mesh.position.set(w.x, heightAt(w.x, w.z) + agl, w.z);
+    scene.add(mesh);
+    rings.push({ mesh });
+  }
+  // 각 링이 다음 링 쪽을 바라보게 (마지막 링은 앞 링에서 오는 방향)
+  rings.forEach((r, i) => {
+    const next = rings[i + 1] || rings[i - 1];
+    if (!next) return;
+    r.mesh.lookAt(next.mesh.position);
+  });
+}
+
+function fmtTime(sec) {
+  const m = Math.floor(sec / 60), s = sec - m * 60;
+  return `${m}:${s.toFixed(2).padStart(5, '0')}`;
+}
+
+function refreshRings() {
+  rings.forEach((r, i) => {
+    r.mesh.visible = gameMode === 'race' && i >= race.idx;
+    r.mesh.material = i === race.idx ? ringNextMat : ringLaterMat;
+  });
+}
+
+function startRace() {
+  Object.assign(race, { idx: 0, start: null, done: false, time: 0 });
+  refreshRings();
+  if (!rings.length) return;
+  // 첫 링(출발 게이트) 400m 앞에서 게이트를 바라보며 출발
+  const a = rings[0].mesh.position, b = (rings[1] || rings[0]).mesh.position;
+  const dir = new THREE.Vector3(a.x - b.x, 0, a.z - b.z).normalize();
+  bird.position.set(a.x + dir.x * 400, a.y, a.z + dir.z * 400);
+  flight.yaw = Math.atan2(dir.x, dir.z);
+  flight.pitch = flight.roll = 0;
+  $('besttime').textContent = bestTime ? `최고 ${fmtTime(bestTime)}` : '';
+}
+
+function updateRace() {
+  if (race.done || race.idx >= rings.length) return;
+  if (race.start !== null) race.time = elapsed - race.start;
+  if (bird.position.distanceTo(rings[race.idx].mesh.position) > RING_R + 8) return;
+  if (race.idx === 0) { race.start = elapsed; toast('🏁 출발!<small>링을 순서대로 통과하세요</small>'); }
+  race.idx++;
+  refreshRings();
+  if (race.idx < rings.length) { sfx.ring(race.idx); return; }
+  race.done = true;
+  const record = !bestTime || race.time < bestTime;
+  if (record) {
+    bestTime = race.time;
+    try { localStorage.setItem(bestKey, String(bestTime)); } catch {}
+  }
+  sfx.fanfare();
+  toast(`🏆 완주! ${fmtTime(race.time)}<small>${record ? '🎉 최고 기록 갱신!' : `최고 기록 ${fmtTime(bestTime)}`} · R 키로 다시 도전</small>`);
+  $('besttime').textContent = `최고 ${fmtTime(bestTime)}`;
+}
+
+// ================= 새우깡 (부스트 충전 아이템) =================
+const CHIP_COUNT = 120;
+const chips = [];
+let stamina = 100, chipsEaten = 0;
+const chipMat = (() => {
+  const cv = document.createElement('canvas');
+  cv.width = cv.height = 128;
+  const ctx = cv.getContext('2d');
+  const grd = ctx.createRadialGradient(64, 64, 10, 64, 64, 64);
+  grd.addColorStop(0, '#fff3c4'); grd.addColorStop(0.5, '#ffb74dcc'); grd.addColorStop(1, '#ff980000');
+  ctx.fillStyle = grd; ctx.fillRect(0, 0, 128, 128);
+  ctx.font = '72px "Segoe UI Emoji", "Apple Color Emoji", sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('🦐', 64, 68);
+  return new THREE.SpriteMaterial({ map: makeTexture(cv) });
+})();
+
+function placeChip(c) {
+  const x = THREE.MathUtils.randFloat(BOUND.minX, BOUND.maxX);
+  const z = THREE.MathUtils.randFloat(BOUND.minZ, BOUND.maxZ);
+  c.baseY = heightAt(x, z) + THREE.MathUtils.randFloat(60, 260);
+  c.sprite.position.set(x, c.baseY, z);
+  c.phase = Math.random() * Math.PI * 2;
+}
+function buildChips() {
+  for (let i = 0; i < CHIP_COUNT; i++) {
+    const c = { sprite: new THREE.Sprite(chipMat) };
+    c.sprite.scale.setScalar(22);
+    scene.add(c.sprite);
+    placeChip(c);
+    chips.push(c);
+  }
+}
+function updateChips(t) {
+  for (const c of chips) {
+    c.sprite.position.y = c.baseY + Math.sin(t * 2 + c.phase) * 4;
+    if (c.sprite.position.distanceTo(bird.position) < 24) {
+      stamina = Math.min(100, stamina + 25);
+      chipsEaten++;
+      sfx.crunch();
+      placeChip(c); // 먹은 새우깡은 다른 곳에 다시 생김
+    }
+  }
+}
+
+// ================= 미니맵 =================
+const mm = $('minimap'), mctx = mm.getContext('2d');
+const MM = mm.width;
+const worldMinX = (gx0 - cxp) * MPP, worldMinZ = (gy0 - cyp) * MPP;
+const mmScale = MM / Math.max(W, H) / MPP;
+const toMap = (x, z) => [(x - worldMinX) * mmScale, (z - worldMinZ) * mmScale];
+let mmBg = null;
+
+function buildMinimapBg() {
+  // 높이맵으로 간단한 지형도: 물(파랑) → 평지(초록) → 산(갈색)
+  mmBg = document.createElement('canvas');
+  mmBg.width = mmBg.height = MM;
+  const ctx = mmBg.getContext('2d');
+  const img = ctx.createImageData(MM, MM);
+  const c = new THREE.Color();
+  for (let y = 0; y < MM; y++) for (let x = 0; x < MM; x++) {
+    const px = x / mmScale / MPP, py = y / mmScale / MPP;
+    const i = (y * MM + x) * 4;
+    if (px >= W || py >= H) { img.data[i + 3] = 0; continue; }
+    const h = heightAtPixel(px, py);
+    if (h <= 1) c.set(0x3f7fbf);
+    else c.setHSL(0.3 - Math.min(h / 800, 1) * 0.22, 0.35, 0.32 + Math.min(h / 800, 1) * 0.2);
+    img.data[i] = c.r * 255; img.data[i + 1] = c.g * 255; img.data[i + 2] = c.b * 255; img.data[i + 3] = 230;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+function drawMinimap() {
+  mctx.clearRect(0, 0, MM, MM);
+  if (mmBg) mctx.drawImage(mmBg, 0, 0);
+  mctx.fillStyle = '#ffb74d';
+  for (const c of chips) {
+    const [x, y] = toMap(c.sprite.position.x, c.sprite.position.z);
+    mctx.fillRect(x - 1.5, y - 1.5, 3, 3);
+  }
+  if (gameMode === 'race') {
+    mctx.strokeStyle = '#4fc3f7'; mctx.lineWidth = 2;
+    mctx.beginPath();
+    rings.forEach((r, i) => {
+      if (i < race.idx) return;
+      const [x, y] = toMap(r.mesh.position.x, r.mesh.position.z);
+      i === race.idx ? mctx.moveTo(x, y) : mctx.lineTo(x, y);
+    });
+    mctx.stroke();
+    rings.forEach((r, i) => {
+      if (i < race.idx) return;
+      const [x, y] = toMap(r.mesh.position.x, r.mesh.position.z);
+      mctx.fillStyle = i === race.idx ? '#ffd54a' : '#4fc3f7';
+      mctx.beginPath(); mctx.arc(x, y, i === race.idx ? 8 : 5, 0, Math.PI * 2); mctx.fill();
+    });
+  } else {
+    for (const pl of places) {
+      const [x, y] = toMap(pl.x, pl.z);
+      mctx.fillStyle = pl.visited ? '#66bb6a' : '#ffd54a';
+      mctx.beginPath(); mctx.arc(x, y, 7, 0, Math.PI * 2); mctx.fill();
+      mctx.strokeStyle = '#000a'; mctx.lineWidth = 2; mctx.stroke();
+    }
+  }
+  // 갈매기 (북쪽이 위)
+  const [bx, by] = toMap(bird.position.x, bird.position.z);
+  mctx.save();
+  mctx.translate(bx, by);
+  mctx.rotate(-flight.yaw);
+  mctx.fillStyle = '#fff'; mctx.strokeStyle = '#000'; mctx.lineWidth = 2;
+  mctx.beginPath(); mctx.moveTo(0, -14); mctx.lineTo(10, 10); mctx.lineTo(0, 5); mctx.lineTo(-10, 10); mctx.closePath();
+  mctx.fill(); mctx.stroke();
+  mctx.restore();
+}
+
+// ================= 효과음 (Web Audio로 직접 합성) =================
+let audio = null, muted = false;
+function initAudio() {
+  if (audio) return;
+  const ctx = new AudioContext();
+  const master = ctx.createGain();
+  master.gain.value = muted ? 0 : 0.6;
+  master.connect(ctx.destination);
+  const noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+  const d = noise.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  // 바람 소리: 계속 도는 잡음 → 대역 필터 (속도에 따라 크기·음색 변화)
+  const wind = ctx.createBufferSource();
+  wind.buffer = noise; wind.loop = true;
+  const windFilt = ctx.createBiquadFilter();
+  windFilt.type = 'bandpass'; windFilt.Q.value = 0.8;
+  const windGain = ctx.createGain();
+  windGain.gain.value = 0;
+  wind.connect(windFilt).connect(windGain).connect(master);
+  wind.start();
+  audio = { ctx, master, noise, windFilt, windGain };
+}
+function noiseBurst(type, freq, dur, vol) {
+  if (!audio) return;
+  const { ctx } = audio, t = ctx.currentTime;
+  const src = ctx.createBufferSource();
+  src.buffer = audio.noise;
+  const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  src.connect(f).connect(g).connect(audio.master);
+  src.start(t, Math.random()); src.stop(t + dur);
+}
+function tone(freq, start, dur, vol, type = 'sine') {
+  if (!audio) return;
+  const { ctx } = audio, t = ctx.currentTime + start;
+  const o = ctx.createOscillator(); o.type = type; o.frequency.value = freq;
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(audio.master);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+const sfx = {
+  flap: () => noiseBurst('lowpass', 700, 0.14, 0.35),
+  crunch: () => { noiseBurst('highpass', 2500, 0.07, 0.5); tone(1400, 0, 0.06, 0.12, 'square'); tone(900, 0.05, 0.06, 0.1, 'square'); },
+  chime: () => [784, 988, 1175, 1568].forEach((f, i) => tone(f, i * 0.09, 0.4, 0.25)),
+  ring: n => { tone(660 + n * 40, 0, 0.18, 0.25, 'triangle'); tone(990 + n * 60, 0.08, 0.25, 0.2, 'triangle'); },
+  fanfare: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i * 0.13, i === 5 ? 0.8 : 0.2, 0.25, 'triangle')),
+};
+function updateWind(speed) {
+  if (!audio) return;
+  const target = playing ? 0.04 + (speed / 120) * 0.22 : 0;
+  audio.windGain.gain.setTargetAtTime(target, audio.ctx.currentTime, 0.2);
+  audio.windFilt.frequency.setTargetAtTime(250 + speed * 7, audio.ctx.currentTime, 0.2);
+}
+
+// ================= 갈매기 =================
+function makeSeagull() {
+  const bird = new THREE.Group();
+  const white = new THREE.MeshLambertMaterial({ color: 0xffffff });
+  const grey = new THREE.MeshLambertMaterial({ color: 0x9aa5b1 });
+  const black = new THREE.MeshLambertMaterial({ color: 0x222222 });
+  const yellow = new THREE.MeshLambertMaterial({ color: 0xffc107 });
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 12), white);
+  body.scale.set(0.8, 0.7, 1.7);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.36, 16, 12), white);
+  head.position.set(0, 0.32, -0.9);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.45, 8), yellow);
+  beak.rotation.x = -Math.PI / 2;
+  beak.position.set(0, 0.28, -1.38);
+  for (const x of [-0.2, 0.2]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), black);
+    eye.position.set(x, 0.42, -1.12);
+    bird.add(eye);
+  }
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.06, 0.6), grey);
+  tail.position.set(0, 0.05, 0.95);
+  bird.add(body, head, beak, tail);
+
+  bird.userData.wings = [-1, 1].map(side => {
+    const pivot = new THREE.Group();
+    pivot.position.set(side * 0.3, 0.15, -0.15);
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.06, 0.75), grey);
+    wing.position.x = side * 0.95;
+    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.05, 0.5), black);
+    tip.position.set(side * 2.2, 0, 0.08);
+    pivot.add(wing, tip);
+    bird.add(pivot);
+    return { pivot, side };
+  });
+  bird.scale.setScalar(2.2);
+  bird.rotation.order = 'YXZ';
+  return bird;
+}
+const bird = makeSeagull();
+scene.add(bird);
+
+// ================= 입력 =================
+const keys = {};
+let anyKeyPressed = false;
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return; // API 키 입력 중엔 무시
+  keys[e.code] = true;
+  anyKeyPressed = true;
+  $('hint').classList.add('hidden');
+  if (e.code.startsWith('Arrow')) e.preventDefault();
+  if (!playing) return;
+  if (e.code === 'KeyR') gameMode === 'race' ? startRace() : resetBird();
+  if (e.code === 'KeyC') firstPerson = !firstPerson;
+  if (e.code === 'KeyM') {
+    muted = !muted;
+    if (audio) audio.master.gain.value = muted ? 0 : 0.6;
+    toast(muted ? '🔇 소리 끔' : '🔊 소리 켬');
+  }
+  if (e.code === 'Escape') openMenu();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { for (const k in keys) keys[k] = false; }); // 창 밖으로 포커스가 나가면 키 해제
+renderer.domElement.tabIndex = 0;
+renderer.domElement.style.outline = 'none';
+renderer.domElement.addEventListener('pointerdown', () => renderer.domElement.focus());
+
+// ================= 게임 상태 =================
+const START = toWorld(...CITY_CFG.start);
+const flight = { yaw: 0, pitch: 0, roll: 0, speed: 45 };
+let playing = false, gameMode = 'tour', firstPerson = false;
+
+function resetBird() {
+  bird.position.set(START.x, heightAt(START.x, START.z) + 220, START.z);
+  flight.yaw = 0; flight.pitch = 0; flight.roll = 0;
+  const t = nearestTarget();
+  if (t) flight.yaw = Math.atan2(-(t.x - START.x), -(t.z - START.z));
+}
+
+function nearestTarget() {
+  let best = null, bd = Infinity;
+  for (const p of places) {
+    if (p.visited) continue;
+    const d = Math.hypot(p.x - bird.position.x, p.z - bird.position.z);
+    if (d < bd) { bd = d; best = p; }
+  }
+  return best;
+}
+
+let toastTimer;
+function toast(html) {
+  $('toast').innerHTML = html;
+  $('toast').style.opacity = 1;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $('toast').style.opacity = 0, 2800);
+}
+
+function visit(p) {
+  p.visited = true;
+  p.beam.material.color.set(0x4caf50);
+  scene.remove(p.label);
+  p.label = labelSprite('✅ ' + p.name, '#8bf08f');
+  p.label.position.set(p.x, p.ground + p.labelH, p.z);
+  scene.add(p.label);
+  const n = places.filter(q => q.visited).length;
+  $('visited').textContent = n;
+  if (n === places.length) toast(`🎉 ${CITY_CFG.title} 여행 완료!<small>모든 명소 ${n}곳을 방문했어요</small>`);
+  else toast(`📍 ${p.name} 도착!<small>${p.desc}</small>`);
+}
+
+// ================= 메인 루프 =================
+let prevFlap = 0;
+
+function pointArrow(x, z) {
+  let rel = Math.atan2(-(x - bird.position.x), -(z - bird.position.z)) - flight.yaw;
+  rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+  $('arrow').style.transform = `rotate(${-rel}rad)`;
+}
+
+function updateRaceHud() {
+  $('timer').firstChild.textContent = `⏱ ${fmtTime(race.time)}`;
+  if (race.done) {
+    $('navsub').textContent = '🏆 완주!';
+    $('tname').textContent = fmtTime(race.time);
+    $('tdist').textContent = 'R 키로 다시 도전';
+    $('arrow').style.transform = '';
+    return;
+  }
+  const r = rings[race.idx].mesh.position;
+  pointArrow(r.x, r.z);
+  $('navsub').textContent = race.idx === 0 ? '🏁 출발 게이트' : `🏁 링 ${race.idx} / ${rings.length - 1}`;
+  const d = bird.position.distanceTo(r), dy = r.y - bird.position.y;
+  $('tname').textContent = d > 1000 ? `${(d / 1000).toFixed(1)} km` : `${Math.round(d)} m`;
+  $('tdist').textContent = Math.abs(dy) < 20 ? '높이 딱 좋아요 👍' : dy > 0 ? `▲ ${Math.round(dy)}m 올라가세요` : `▼ ${Math.round(-dy)}m 내려가세요`;
+}
+let lastTime = performance.now(), elapsed = 0, creditTimer = 0, mmTimer = 0;
+const fwd = new THREE.Vector3();
+const camTarget = new THREE.Vector3();
+let lodTimer = 0;
+
+function update(dt, t) {
+  const turn = (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0);
+  const climb = (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0);
+  const wantBoost = keys.ShiftLeft || keys.ShiftRight;
+  const boost = wantBoost && stamina > 0;
+  if (boost) stamina = Math.max(0, stamina - 12 * dt);
+  if (wantBoost && stamina <= 0 && (!toastTimer || $('toast').style.opacity == 0)) toast('🦐 부스트가 비었어요!<small>새우깡을 먹어서 채우세요</small>');
+
+  flight.yaw += turn * 1.1 * dt;
+  flight.roll += (turn * 0.6 - flight.roll) * Math.min(1, dt * 4);
+  flight.pitch += (climb * 0.55 - flight.pitch) * Math.min(1, dt * 3);
+  flight.speed += ((boost ? 120 : 45) - flight.speed) * Math.min(1, dt * 2);
+
+  const cp = Math.cos(flight.pitch);
+  fwd.set(-Math.sin(flight.yaw) * cp, Math.sin(flight.pitch), -Math.cos(flight.yaw) * cp);
+  bird.position.addScaledVector(fwd, flight.speed * dt);
+
+  // 땅·경계 처리
+  const ground = Math.max(heightAt(bird.position.x, bird.position.z), useGoogle ? tileGround : -Infinity);
+  if (bird.position.y < ground + 10) { bird.position.y = ground + 10; flight.pitch = Math.max(flight.pitch, 0); }
+  bird.position.y = Math.min(bird.position.y, 1800);
+  const p = bird.position;
+  if (p.x < BOUND.minX || p.x > BOUND.maxX || p.z < BOUND.minZ || p.z > BOUND.maxZ) {
+    p.x = THREE.MathUtils.clamp(p.x, BOUND.minX, BOUND.maxX);
+    p.z = THREE.MathUtils.clamp(p.z, BOUND.minZ, BOUND.maxZ);
+    if (!toastTimer || $('toast').style.opacity == 0) toast('🧭 지도 끝이에요! 방향을 돌려주세요');
+  }
+
+  bird.rotation.set(flight.pitch * 0.8, flight.yaw, flight.roll);
+  const flapSpeed = boost ? 14 : climb > 0 ? 11 : 6;
+  const flapAmp = climb < 0 && !boost ? 0.12 : 0.55; // 하강할 땐 활공
+  const flap = Math.sin(t * flapSpeed);
+  for (const { pivot, side } of bird.userData.wings) pivot.rotation.z = side * flap * flapAmp;
+  if (prevFlap > 0 && flap <= 0 && flapAmp > 0.3) sfx.flap(); // 날개를 내려칠 때마다 '퍼덕'
+  prevFlap = flap;
+
+  updateChips(t);
+  if (gameMode === 'race') updateRace();
+
+  // 명소 도착 확인
+  if (gameMode === 'tour') for (const pl of places) {
+    if (!pl.visited && Math.hypot(pl.x - p.x, pl.z - p.z) < 130 && p.y < pl.ground + pl.reachH) visit(pl);
+  }
+
+  if ((lodTimer -= dt) < 0) {
+    lodTimer = 0.15;
+    if (useGoogle) updateTileGround();
+    // 기본 지도: 가까운 지형은 고해상도 위성사진으로 교체
+    else for (const c of chunks) if (!c.hi && Math.hypot(c.x - p.x, c.z - p.z) < 3000) upgradeChunk(c);
+  }
+
+  // HUD
+  $('alt').textContent = Math.round(p.y);
+  $('spd').textContent = Math.round(flight.speed * 3.6);
+  $('stamina').style.width = stamina + '%';
+  $('stamina').classList.toggle('low', stamina < 20);
+  $('chips').textContent = chipsEaten;
+  if (gameMode === 'race') return updateRaceHud();
+  $('navsub').textContent = '다음 목적지';
+  const target = nearestTarget();
+  if (target) {
+    const dx = target.x - p.x, dz = target.z - p.z;
+    let rel = Math.atan2(-dx, -dz) - flight.yaw;
+    rel = Math.atan2(Math.sin(rel), Math.cos(rel));
+    $('arrow').style.transform = `rotate(${-rel}rad)`;
+    $('tname').textContent = target.name;
+    const d = Math.hypot(dx, dz);
+    $('tdist').textContent = d > 1000 ? `${(d / 1000).toFixed(1)} km` : `${Math.round(d)} m`;
+  } else {
+    $('tname').textContent = '여행 완료! 🎉';
+    $('tdist').textContent = '자유롭게 날아보세요';
+    $('arrow').style.transform = '';
+  }
+}
+
+function loop() {
+  requestAnimationFrame(loop);
+  const now = performance.now();
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+  const t = (elapsed += dt);
+  if (playing) update(dt, t);
+  else { flight.yaw += dt * 0.05; bird.rotation.y = flight.yaw; } // 시작 전엔 천천히 둘러보기
+
+  updateWind(flight.speed);
+  if (playing && (mmTimer -= dt) < 0) { mmTimer = 0.1; drawMinimap(); }
+
+  // 1인칭: 갈매기 눈 위치에서 앞을 봄
+  bird.visible = !(firstPerson && playing);
+  if (firstPerson && playing) {
+    camera.position.copy(bird.position).addScaledVector(fwd, 4);
+    camera.position.y += 1;
+    camera.lookAt(camera.position.x + fwd.x * 100, camera.position.y + fwd.y * 100, camera.position.z + fwd.z * 100);
+    camera.rotateZ(flight.roll * 0.6); // 선회할 때 화면도 기울임
+  } else {
+  // 카메라: 갈매기 뒤쪽 위에서 따라감
+  const back = 22, up = 7;
+  camTarget.set(bird.position.x + Math.sin(flight.yaw) * back, bird.position.y + up,
+                bird.position.z + Math.cos(flight.yaw) * back);
+  camera.position.lerp(camTarget, playing ? Math.min(1, dt * 4) : 1);
+  const camGround = heightAt(camera.position.x, camera.position.z) + 5;
+  if (camera.position.y < camGround) camera.position.y = camGround;
+  camera.lookAt(bird.position.x - Math.sin(flight.yaw) * 20, bird.position.y + 2,
+                bird.position.z - Math.cos(flight.yaw) * 20);
+  }
+  if (tiles) {
+    camera.updateMatrixWorld();
+    tiles.update();
+    if ((creditTimer -= dt) < 0) { creditTimer = 1; updateGoogleCredit(); }
+  }
+  renderer.render(scene, camera);
+}
+
+// ================= 시작 =================
+loop();
+(async () => {
+  await loadTerrain();
+  buildTerrainChunks();
+  resetBird();
+  buildBuildings();
+  addPlaces();
+  buildRings();
+  buildChips();
+  buildMinimapBg();
+  setMode(gameMode);
+  resetBird();
+  $('status').textContent = '준비 완료!';
+  $('start-google').disabled = $('start-basic').disabled = false;
+})();
+
+try { $('apikey').value = localStorage.getItem('googleMapsKey') || ''; } catch {}
+
+// config.js에 토큰이 들어 있으면 입력칸 없이 바로 Google 3D로 시작
+const BUILT_IN_TOKEN = (window.GAME_CONFIG?.cesiumToken || '').trim();
+if (BUILT_IN_TOKEN) {
+  $('google-box').innerHTML = '🌏 <b>Google 실사 3D 지도</b> 준비 완료! 바로 시작하세요';
+}
+
+// ---------- 모드 선택 (명소 여행 / 링 레이스) ----------
+const MODE_DESC = {
+  tour: '빛기둥이 있는 명소를 모두 방문하면 여행 완료!',
+  race: '링을 순서대로 통과하는 타임어택! 새우깡으로 부스트를 채우며 최고 기록에 도전하세요.',
+};
+function setMode(m) {
+  gameMode = m;
+  document.querySelectorAll('.modes button').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  $('mode-desc').textContent = MODE_DESC[m];
+  $('menu-best').textContent = bestTime ? `(최고 ${fmtTime(bestTime)})` : '';
+  for (const pl of places) pl.beam.visible = pl.label.visible = m === 'tour';
+  refreshRings();
+}
+document.querySelectorAll('.modes button').forEach(b => b.onclick = () => setMode(b.dataset.mode));
+setMode('tour');
+
+function openMenu() {
+  playing = false;
+  setMode(gameMode);
+  $('overlay').classList.remove('hidden');
+  for (const id of ['hud', 'nav', 'timer', 'minimap', 'hint']) $(id).classList.add('hidden');
+  $('status').textContent = '⏸ 일시정지 — 모드를 바꾸거나 다시 시작하세요';
+}
+
+function beginTrip(msg) {
+  initAudio();
+  audio?.ctx.resume();
+  playing = true;
+  setMode(gameMode);
+  stamina = 100;
+  if (gameMode === 'race') {
+    startRace();
+    msg = '🏁 링 레이스!<small>노란 링을 순서대로 통과하세요. 첫 링부터 시간이 재져요</small>';
+  } else resetBird();
+  $('overlay').classList.add('hidden');
+  $('hud').classList.remove('hidden');
+  $('nav').classList.remove('hidden');
+  $('minimap').classList.remove('hidden');
+  $('timer').classList.toggle('hidden', gameMode !== 'race');
+  document.activeElement?.blur();
+  renderer.domElement.focus(); // 바로 방향키가 먹히도록 게임 화면에 포커스
+  toast(msg);
+  setTimeout(() => { if (!anyKeyPressed) $('hint').classList.remove('hidden'); }, 4000);
+}
+
+$('start-basic').onclick = () => {
+  stopGoogle();
+  useGoogle = false;
+  terrainMap.visible = true;
+  if (buildingMesh) buildingMesh.visible = true;
+  $('bstat').textContent = `🏢 실제 건물 ${DATA.buildings.length.toLocaleString()}개 (OSM)`;
+  beginTrip(`🕊️ ${CITY_CFG.title} 여행 출발!<small>노란 빛기둥을 찾아 날아가세요</small>`);
+};
+
+$('start-google').onclick = async () => {
+  const key = BUILT_IN_TOKEN || $('apikey').value.trim();
+  if (!key) { $('status').textContent = '⚠️ 토큰이나 API 키를 먼저 붙여넣어 주세요'; $('apikey').focus(); return; }
+  if (!BUILT_IN_TOKEN) try { localStorage.setItem('googleMapsKey', key); } catch {}
+  $('start-google').disabled = $('start-basic').disabled = true;
+  $('status').textContent = 'Google 3D 지도에 연결하는 중…';
+  let ok = !!tiles; // 이미 연결돼 있으면 그대로 사용
+  if (!ok) try { ok = await startGoogle(key); } catch (e) { console.error(e); }
+  $('start-google').disabled = $('start-basic').disabled = false;
+  if (!ok) {
+    stopGoogle();
+    $('status').textContent = '⚠️ Google 3D 지도를 불러오지 못했어요. 토큰(키)을 다시 확인해 주세요';
+    return;
+  }
+  useGoogle = true;
+  terrainMap.visible = false;
+  if (buildingMesh) buildingMesh.visible = CITY_CFG.boxesWithGoogle;
+  $('bstat').textContent = CITY_CFG.boxesWithGoogle
+    ? `🌏 Google 3D 지형 + 🏢 건물 ${DATA.buildings.length.toLocaleString()}개`
+    : '🌏 Google 실사 3D 지도';
+  beginTrip(`🕊️ ${CITY_CFG.title} 여행 출발!<small>Google 실사 3D 지도로 날아요</small>`);
+};
+</script>
+</body>
+</html>
