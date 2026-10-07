@@ -118,6 +118,7 @@
   <div id="tbtns">
     <button data-act="cam" aria-label="시점 전환">🎥</button>
     <button data-act="night" aria-label="낮 밤 전환">🌙</button>
+    <button data-act="music" aria-label="음악">🎹</button>
     <button data-act="full" class="fs-btn" aria-label="전체 화면">⛶</button>
     <button data-act="menu" aria-label="메뉴">⏸</button>
   </div>
@@ -131,6 +132,7 @@
   <div class="cities">
     <a href="?city=busan" id="city-busan">🇰🇷 부산 북구</a>
     <a href="?city=tokyo" id="city-tokyo">🇯🇵 도쿄</a>
+    <a href="?city=vienna" id="city-vienna">🇦🇹 빈</a>
   </div>
   <h1 id="headline">🕊️ 갈매기의 여행</h1>
   <p><span id="hero"></span></p>
@@ -139,13 +141,14 @@
     <button data-mode="race">🏁 링 레이스 <small id="menu-best"></small></button>
     <button id="daynight">☀️ 낮</button>
     <button id="fullscreen" class="fs-btn">⛶ 전체 화면</button>
+    <button id="music-btn" class="on">🎹 음악 켬</button>
   </div>
   <p id="mode-desc"></p>
   <div id="keys">
     <kbd>←</kbd><kbd>→</kbd> 또는 <kbd>A</kbd><kbd>D</kbd> 방향 전환 &nbsp;·&nbsp;
     <kbd>↑</kbd><kbd>↓</kbd> 또는 <kbd>W</kbd><kbd>S</kbd> 상승 / 하강<br>
     <kbd>Shift</kbd> 부스트 (쉬면 천천히 충전, 🦐 새우깡은 바로 충전) &nbsp;·&nbsp; <kbd>R</kbd> 다시 시작<br>
-    <kbd>C</kbd> 1인칭 / 3인칭 &nbsp;·&nbsp; <kbd>N</kbd> 낮 / 밤 &nbsp;·&nbsp; <kbd>F</kbd> 전체 화면 &nbsp;·&nbsp; <kbd>M</kbd> 소리 켜기/끄기 &nbsp;·&nbsp; <kbd>Esc</kbd> 메뉴<br>
+    <kbd>C</kbd> 1인칭 / 3인칭 &nbsp;·&nbsp; <kbd>N</kbd> 낮 / 밤 &nbsp;·&nbsp; <kbd>F</kbd> 전체 화면 &nbsp;·&nbsp; <kbd>P</kbd> 피아노 음악 &nbsp;·&nbsp; <kbd>M</kbd> 모든 소리 &nbsp;·&nbsp; <kbd>Esc</kbd> 메뉴<br>
     <small>갈매기는 앞으로 계속 날아가요. 방향키로 방향과 높이를 조종하세요!</small>
   </div>
   <div id="google-box">
@@ -191,6 +194,20 @@ window.CITIES = {
       [139.7480, 35.6586, 200], [139.7570, 35.6480, 150], [139.7660, 35.6375, 180], [139.7737, 35.6300, 80],
       [139.7720, 35.6550, 150], [139.7660, 35.6812, 250], [139.7740, 35.6985, 200], [139.7900, 35.7110, 150],
       [139.8090, 35.7100, 350],
+    ],
+  },
+  vienna: {
+    title: '빈', hero: '갈매기가 되어 음악의 도시 빈의 하늘을 날아보세요!',
+    data: 'vienna-data.js', dataVar: 'VIENNA_DATA',
+    area: { west: 16.295, east: 16.425, south: 48.172, north: 48.248 },
+    start: [16.3640, 48.2010], // 링슈트라세·부르크가르텐 상공
+    geoid: 47,
+    boxesWithGoogle: false,     // 빈은 Google 실사 3D 건물이 있음
+    // 링 레이스: 쇤브룬 → 마리아힐프 → 시청 → 보티프 성당 → 슈테판 대성당 → 훈데르트바서 → 대관람차 → 도나우 강 → 도나우 타워
+    race: [
+      [16.3123, 48.1860, 90], [16.3300, 48.1930, 120], [16.3400, 48.1985, 120], [16.3590, 48.2105, 140],
+      [16.3620, 48.2160, 140], [16.3745, 48.2085, 180], [16.3935, 48.2070, 90], [16.3990, 48.2167, 110],
+      [16.4040, 48.2290, 80], [16.4120, 48.2402, 200],
     ],
   },
 };
@@ -771,9 +788,110 @@ const sfx = {
   ring: n => { tone(660 + n * 40, 0, 0.18, 0.25, 'triangle'); tone(990 + n * 60, 0.08, 0.25, 0.2, 'triangle'); },
   fanfare: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i * 0.13, i === 5 ? 0.8 : 0.2, 0.25, 'triangle')),
 };
+// ================= 🎹 잔잔한 그랜드 피아노 (Web Audio로 직접 연주) =================
+// 녹음된 곡이 아니라, 코드 진행 위에 아르페지오와 멜로디를 매번 조금씩 다르게 즉흥 연주해요.
+let musicOn = true, musicBus = null, musicTimer = null, nextNoteTime = 0, step = 0;
+const BPM = 64, EIGHTH = 60 / BPM / 2;
+// F장조 I–V–vi–IV 느낌: Fmaj7 → C/E → Dm7 → B♭maj7 (MIDI 음 번호)
+const PROGRESSION = [
+  { bass: [41, 48], arp: [57, 60, 64, 67] },
+  { bass: [40, 48], arp: [55, 60, 64, 67] },
+  { bass: [38, 45], arp: [57, 60, 62, 65] },
+  { bass: [34, 41], arp: [57, 62, 65, 69] },
+];
+const MELODY_NOTES = [72, 74, 76, 77, 79, 81, 84]; // F장조 음계 위쪽 음들
+const ARP_PATTERN = [0, 1, 2, 3, 2, 1, 2, 3];
+const midiFreq = n => 440 * 2 ** ((n - 69) / 12);
+
+function makeReverb(ctx) {
+  // 콘서트홀 잔향: 3초 동안 서서히 사라지는 잡음을 임펄스 응답으로 사용
+  const len = ctx.sampleRate * 3.2, ir = ctx.createBuffer(2, len, ctx.sampleRate);
+  for (let ch = 0; ch < 2; ch++) {
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2.6;
+  }
+  const conv = ctx.createConvolver();
+  conv.buffer = ir;
+  return conv;
+}
+
+function initMusic() {
+  if (musicBus || !audio) return;
+  const { ctx, master } = audio;
+  musicBus = ctx.createGain();
+  musicBus.gain.value = musicOn ? 0.55 : 0;
+  const dry = ctx.createGain(); dry.gain.value = 0.7;
+  const wet = ctx.createGain(); wet.gain.value = 0.55;
+  const verb = makeReverb(ctx);
+  musicBus.connect(dry).connect(master);
+  musicBus.connect(verb).connect(wet).connect(master);
+  nextNoteTime = ctx.currentTime + 0.3;
+  musicTimer = setInterval(scheduleMusic, 100);
+}
+
+// 피아노 한 음: 배음 여러 개 + 망치로 친 듯 빠른 시작, 천천히 사라지는 소리, 점점 부드러워지는 음색
+function pianoNote(midi, time, vel, dur = 3.5) {
+  const { ctx } = audio, f = midiFreq(midi);
+  const out = ctx.createGain();
+  out.gain.setValueAtTime(0.0001, time);
+  out.gain.exponentialRampToValueAtTime(vel, time + 0.006);
+  out.gain.exponentialRampToValueAtTime(vel * 0.3, time + 0.6);
+  out.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(Math.min(9000, f * 10), time);
+  lp.frequency.exponentialRampToValueAtTime(Math.max(500, f * 2.5), time + 1.2);
+  lp.connect(out).connect(musicBus);
+  [1, 0.55, 0.28, 0.14, 0.07, 0.035].forEach((amp, i) => {
+    const n = i + 1;
+    const o = ctx.createOscillator();
+    o.frequency.value = f * n * (1 + 0.0003 * n * n); // 실제 피아노 현처럼 높은 배음이 살짝 높음
+    o.detune.value = (Math.random() - 0.5) * 4;
+    const g = ctx.createGain();
+    g.gain.value = amp;
+    o.connect(g).connect(lp);
+    o.start(time);
+    o.stop(time + dur + 0.1);
+  });
+}
+
+function scheduleMusic() {
+  if (!audio || !musicOn) return;
+  const { ctx } = audio;
+  while (nextNoteTime < ctx.currentTime + 0.4) {
+    const bar = Math.floor(step / 8), beat = step % 8;
+    const chord = PROGRESSION[bar % PROGRESSION.length];
+    const t = nextNoteTime + (Math.random() - 0.5) * 0.015; // 사람이 치는 듯 살짝 흔들리는 박자
+    if (beat === 0) chord.bass.forEach((n, i) => pianoNote(n, t + i * 0.02, 0.16, 5));
+    if (beat === 4) pianoNote(chord.bass[0] + 12, t, 0.09, 3.5);
+    // 아르페지오: 두 바퀴째는 한 옥타브 위로 살짝
+    const up = (Math.floor(bar / 4) % 2 === 1 && beat >= 4) ? 12 : 0;
+    pianoNote(chord.arp[ARP_PATTERN[beat]] + up, t, 0.06 + Math.random() * 0.03, 3);
+    // 멜로디: 가끔씩 떨어지는 맑은 음 (코드 음과 어울리는 음 위주)
+    if ((beat === 0 || beat === 3 || beat === 6) && Math.random() < (beat === 0 ? 0.75 : 0.35)) {
+      const choices = MELODY_NOTES.filter(n => chord.arp.some(a => (n - a) % 12 === 0) || Math.random() < 0.25);
+      pianoNote(choices[Math.floor(Math.random() * choices.length)], t + 0.01, 0.1 + Math.random() * 0.04, 4.5);
+    }
+    nextNoteTime += EIGHTH;
+    step++;
+  }
+}
+
+function setMusic(on) {
+  musicOn = on;
+  if (audio && musicBus) {
+    musicBus.gain.setTargetAtTime(on ? 0.55 : 0, audio.ctx.currentTime, 0.4); // 부드럽게 켜고 끄기
+    if (on) nextNoteTime = Math.max(nextNoteTime, audio.ctx.currentTime + 0.1);
+  }
+  $('music-btn').textContent = on ? '🎹 음악 켬' : '🎹 음악 끔';
+  $('music-btn').classList.toggle('on', on);
+  if (playing) toast(on ? '🎹 피아노 음악 켬' : '🎹 피아노 음악 끔');
+}
+$('music-btn').onclick = () => setMusic(!musicOn);
+
 function updateWind(speed) {
   if (!audio) return;
-  const target = playing ? 0.04 + (speed / 120) * 0.22 : 0;
+  const target = playing ? 0.03 + (speed / 120) * 0.15 : 0;
   audio.windGain.gain.setTargetAtTime(target, audio.ctx.currentTime, 0.2);
   audio.windFilt.frequency.setTargetAtTime(250 + speed * 7, audio.ctx.currentTime, 0.2);
 }
@@ -937,6 +1055,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyC') firstPerson = !firstPerson;
   if (e.code === 'KeyN') setNight(!night);
   if (e.code === 'KeyF') toggleFullscreen();
+  if (e.code === 'KeyP') setMusic(!musicOn);
   if (e.code === 'KeyM') {
     muted = !muted;
     if (audio) audio.master.gain.value = muted ? 0 : 0.6;
@@ -1232,6 +1351,7 @@ for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) boostBtn.
 document.querySelectorAll('#tbtns button').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.act === 'cam') firstPerson = !firstPerson;
   if (b.dataset.act === 'night') setNight(!night);
+  if (b.dataset.act === 'music') setMusic(!musicOn);
   if (b.dataset.act === 'full') toggleFullscreen();
   if (b.dataset.act === 'menu') openMenu();
 }));
@@ -1273,6 +1393,7 @@ function openMenu() {
 function beginTrip(msg) {
   initAudio();
   audio?.ctx.resume();
+  initMusic();
   playing = true;
   setMode(gameMode);
   stamina = 100;
