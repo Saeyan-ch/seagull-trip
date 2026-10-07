@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>갈매기의 북구 여행</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="갈매기 여행">
+<meta name="theme-color" content="#1d4f7a">
 <style>
   html, body { margin: 0; height: 100%; overflow: hidden; background: #a9d3f5; font-family: "Segoe UI", "Malgun Gothic", sans-serif; }
   #hud { position: fixed; top: 14px; left: 14px; color: #fff; font-size: 15px; line-height: 1.7;
@@ -110,6 +118,7 @@
   <div id="tbtns">
     <button data-act="cam" aria-label="시점 전환">🎥</button>
     <button data-act="night" aria-label="낮 밤 전환">🌙</button>
+    <button data-act="full" class="fs-btn" aria-label="전체 화면">⛶</button>
     <button data-act="menu" aria-label="메뉴">⏸</button>
   </div>
   <button id="boost-btn">🚀<br>부스트</button>
@@ -129,13 +138,14 @@
     <button data-mode="tour" class="on">🧭 명소 여행</button>
     <button data-mode="race">🏁 링 레이스 <small id="menu-best"></small></button>
     <button id="daynight">☀️ 낮</button>
+    <button id="fullscreen" class="fs-btn">⛶ 전체 화면</button>
   </div>
   <p id="mode-desc"></p>
   <div id="keys">
     <kbd>←</kbd><kbd>→</kbd> 또는 <kbd>A</kbd><kbd>D</kbd> 방향 전환 &nbsp;·&nbsp;
     <kbd>↑</kbd><kbd>↓</kbd> 또는 <kbd>W</kbd><kbd>S</kbd> 상승 / 하강<br>
     <kbd>Shift</kbd> 부스트 (쉬면 천천히 충전, 🦐 새우깡은 바로 충전) &nbsp;·&nbsp; <kbd>R</kbd> 다시 시작<br>
-    <kbd>C</kbd> 1인칭 / 3인칭 &nbsp;·&nbsp; <kbd>N</kbd> 낮 / 밤 &nbsp;·&nbsp; <kbd>M</kbd> 소리 켜기/끄기 &nbsp;·&nbsp; <kbd>Esc</kbd> 메뉴<br>
+    <kbd>C</kbd> 1인칭 / 3인칭 &nbsp;·&nbsp; <kbd>N</kbd> 낮 / 밤 &nbsp;·&nbsp; <kbd>F</kbd> 전체 화면 &nbsp;·&nbsp; <kbd>M</kbd> 소리 켜기/끄기 &nbsp;·&nbsp; <kbd>Esc</kbd> 메뉴<br>
     <small>갈매기는 앞으로 계속 날아가요. 방향키로 방향과 높이를 조종하세요!</small>
   </div>
   <div id="google-box">
@@ -926,6 +936,7 @@ addEventListener('keydown', e => {
   if (e.code === 'KeyR') gameMode === 'race' ? startRace() : resetBird();
   if (e.code === 'KeyC') firstPerson = !firstPerson;
   if (e.code === 'KeyN') setNight(!night);
+  if (e.code === 'KeyF') toggleFullscreen();
   if (e.code === 'KeyM') {
     muted = !muted;
     if (audio) audio.master.gain.value = muted ? 0 : 0.6;
@@ -1221,9 +1232,34 @@ for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) boostBtn.
 document.querySelectorAll('#tbtns button').forEach(b => b.addEventListener('click', () => {
   if (b.dataset.act === 'cam') firstPerson = !firstPerson;
   if (b.dataset.act === 'night') setNight(!night);
+  if (b.dataset.act === 'full') toggleFullscreen();
   if (b.dataset.act === 'menu') openMenu();
 }));
 addEventListener('contextmenu', e => { if (IS_TOUCH) e.preventDefault(); }); // 길게 누를 때 메뉴 뜨지 않게
+
+// ---------- 전체 화면 ----------
+const docEl = document.documentElement;
+const canFullscreen = !!(docEl.requestFullscreen || docEl.webkitRequestFullscreen);
+const isInstalledApp = matchMedia('(display-mode: fullscreen), (display-mode: standalone)').matches || navigator.standalone;
+if (isInstalledApp) document.querySelectorAll('.fs-btn').forEach(b => b.classList.add('hidden')); // 앱으로 실행하면 이미 전체 화면
+
+function toggleFullscreen() {
+  if (!canFullscreen) {
+    // 아이폰 사파리는 웹페이지 전체 화면을 지원하지 않음 → 홈 화면에 추가 안내
+    toast('📱 아이폰은 공유 버튼 <b>⬆️</b> → <b>홈 화면에 추가</b><small>홈 화면 아이콘으로 열면 주소창 없이 전체 화면으로 플레이할 수 있어요</small>');
+    return;
+  }
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    const req = (docEl.requestFullscreen || docEl.webkitRequestFullscreen).call(docEl);
+    req?.then?.(() => screen.orientation?.lock?.('landscape')).catch?.(() => {});
+  }
+}
+$('fullscreen').onclick = toggleFullscreen;
+document.addEventListener('fullscreenchange', () => {
+  $('fullscreen').textContent = document.fullscreenElement ? '⛶ 전체 화면 끄기' : '⛶ 전체 화면';
+});
 
 function openMenu() {
   playing = false;

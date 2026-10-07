@@ -1,0 +1,15 @@
+{
+  "name": "갈매기의 여행",
+  "short_name": "갈매기 여행",
+  "description": "갈매기가 되어 실제 도시 하늘을 나는 3D 게임",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0b2236",
+  "theme_color": "#1d4f7a",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
